@@ -2,33 +2,39 @@
 
 PHP knihovna pro komunikaci s [Raiffeisenbank Premium API](https://developers.rb.cz/premium/). Typovaný interface pro bankovní účty, transakce, platební dávky, výpisy a devizové kurzy.
 
-**Standalone knihovna — bez závislosti na Symfony DI kontejneru.**
-
 ## Instalace
 
-### Z lokálního adresáře
-
-```json
-"repositories": [{"type": "path", "url": "lib/rb-premium"}]
-```
 ```bash
-composer require vs-point/rb-premium:@dev
+composer require vs-point/rb-premium
 ```
-
-### Z Git repozitáře
-
-```bash
-composer config repositories.rb-premium git git@git.vs-point.cz:vspoint/package/rb-premium.git
-composer require vs-point/rb-premium:^1.0
-```
-
 ## Konfigurace
 
 Autentizace probíhá přes **mTLS** (klientský certifikát) + hlavičku `X-IBM-Client-Id`.
 
-Převod PKCS#12 na PEM (heslo sandbox certifikátu: `Test12345678`):
+### Převod PKCS#12 (.p12) na PEM
+
+Knihovna očekává certifikát ve formátu PEM. Pokud máš od banky soubor `.p12`, převeď ho pomocí `openssl`:
+
 ```bash
-openssl pkcs12 -in cert.p12 -out cert.pem -nodes -passin pass:Test12345678
+# Heslo zadáš interaktivně (bezpečnější pro produkci)
+openssl pkcs12 -in cert.p12 -out cert.pem -nodes
+
+# Heslo inline (vhodné pro CI/CD scripty)
+openssl pkcs12 -in cert.p12 -out cert.pem -nodes -passin pass:HESLO
+```
+
+Přepínač `-nodes` znamená, že privátní klíč nebude v PEM zašifrovaný (no DES). Pro produkci lze klíč ponechat zašifrovaný — pak je `-nodes` vynechat a heslo předat přes `certPassword`:
+
+```bash
+# PEM s heslem na klíči
+openssl pkcs12 -in cert.p12 -out cert.pem -passin pass:HESLO -passout pass:NOVE_HESLO
+```
+
+Certifikát a klíč lze také rozdělit do dvou souborů (parametry `certPath` + `keyPath`):
+
+```bash
+openssl pkcs12 -in cert.p12 -nokeys -out cert.pem -passin pass:HESLO
+openssl pkcs12 -in cert.p12 -nocerts -nodes -out key.pem -passin pass:HESLO
 ```
 
 ```php
@@ -74,7 +80,7 @@ services:
 $result = $client->accounts->list();
 
 foreach ($result->accounts as $account) {
-    echo $account->iban . ' — ' . $account->mainCurrency . PHP_EOL;
+    echo $account->iban . ' — ' . $account->mainCurrency?->getCurrencyCode() . PHP_EOL;
 }
 
 // Stránkování
@@ -86,9 +92,9 @@ $result = $client->accounts->list(new AccountQuery(page: 1, size: 20));
 $balance = $client->accounts->balance('1234567890');
 
 foreach ($balance->currencyFolders as $folder) {
-    echo $folder->currency . ':' . PHP_EOL;
+    echo $folder->currency?->getCurrencyCode() . ':' . PHP_EOL;
     foreach ($folder->balances as $item) {
-        echo '  ' . $item->balanceType?->value . ': ' . $item->value?->toMoney() . PHP_EOL;
+        echo '  ' . $item->balanceType?->value . ': ' . $item->toMoney() . PHP_EOL;
     }
 }
 ```
@@ -97,11 +103,12 @@ foreach ($balance->currencyFolders as $folder) {
 
 ```php
 use Brick\DateTime\LocalDate;
+use Brick\Money\Currency;
 use VsPoint\RBPremium\DTO\Transaction\TransactionQuery;
 
 $result = $client->transactions->list(
     accountNumber: '1234567890',
-    currencyCode: 'CZK',
+    currency: Currency::of('CZK'),
     query: new TransactionQuery(
         from: LocalDate::of(2024, 1, 1),
         to: LocalDate::of(2024, 1, 31),
@@ -111,11 +118,11 @@ $result = $client->transactions->list(
 
 foreach ($result->transactions as $tx) {
     $money = $tx->amount?->toMoney();
-    echo $tx->bookingDate . ' ' . $money . ' ' . $tx->creditDebitIndication . PHP_EOL;
+    echo $tx->bookingDate . ' ' . $money . ' ' . $tx->creditDebitIndication?->value . PHP_EOL;
 
-    $remittance = $tx->entryDetails?->remittanceInformation;
-    if ($remittance !== null) {
-        echo '  VS: ' . $remittance->variable . ', KS: ' . $remittance->constant . PHP_EOL;
+    $ref = $tx->entryDetails?->transactionDetails?->remittanceInformation?->creditorReferenceInformation;
+    if ($ref !== null) {
+        echo '  VS: ' . $ref->variable . ', KS: ' . $ref->constant . PHP_EOL;
     }
 }
 ```
@@ -177,6 +184,7 @@ file_put_contents('/tmp/vypis.pdf', $pdfContent);
 
 ```php
 use Brick\DateTime\LocalDate;
+use Brick\Money\Currency;
 
 // Aktuální kurzy
 $result = $client->fxRates->list();
@@ -185,11 +193,11 @@ $result = $client->fxRates->list();
 $result = $client->fxRates->list(LocalDate::of(2024, 1, 15));
 
 // Kurz konkrétní měny
-$result = $client->fxRates->get('EUR');
+$result = $client->fxRates->get(Currency::of('EUR'));
 
 foreach ($result->exchangeRateLists as $list) {
     foreach ($list->exchangeRates as $rate) {
-        echo $rate->currencyFrom . '/' . $rate->currencyTo
+        echo $rate->currencyFrom?->getCurrencyCode() . '/' . $rate->currencyTo?->getCurrencyCode()
             . ' nákup: ' . $rate->exchangeRateBuy
             . ' prodej: ' . $rate->exchangeRateSell
             . PHP_EOL;
@@ -203,10 +211,10 @@ foreach ($result->exchangeRateLists as $list) {
 |---------|--------|----------|
 | `accounts` | `list(?AccountQuery)` | GET `/accounts` |
 | `accounts` | `balance(accountNumber)` | GET `/accounts/{accountNumber}/balance` |
-| `transactions` | `list(accountNumber, currencyCode, TransactionQuery)` | GET `/accounts/{accountNumber}/{currencyCode}/transactions` |
+| `transactions` | `list(accountNumber, Currency, TransactionQuery)` | GET `/accounts/{accountNumber}/{currencyCode}/transactions` |
 | `payments` | `importBatch(...)` | POST `/payments/batches` |
 | `payments` | `getBatch(batchFileId)` | GET `/payments/batches/{batchFileId}` |
 | `statements` | `list(StatementListPayload)` | POST `/accounts/statements` |
 | `statements` | `download(StatementDownloadPayload)` | POST `/accounts/statements/download` |
 | `fxRates` | `list(?LocalDate)` | GET `/fxrates` |
-| `fxRates` | `get(currencyCode, ?LocalDate)` | GET `/fxrates/{currencyCode}` |
+| `fxRates` | `get(Currency, ?LocalDate)` | GET `/fxrates/{currencyCode}` |
