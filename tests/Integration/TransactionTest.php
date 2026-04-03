@@ -60,7 +60,7 @@ final class TransactionTest extends AbstractIntegrationTest
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
 
-        self::assertIsArray($result->transactions);
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
         self::assertIsBool($result->lastPage);
     }
 
@@ -68,10 +68,7 @@ final class TransactionTest extends AbstractIntegrationTest
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
 
-        if ($result->transactions === []) {
-            self::markTestSkipped('No transactions in sandbox for the last 3 months.');
-        }
-
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
         self::assertContainsOnlyInstancesOf(Transaction::class, $result->transactions);
 
         $tx = $result->transactions[0];
@@ -85,9 +82,7 @@ final class TransactionTest extends AbstractIntegrationTest
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
 
-        if ($result->transactions === []) {
-            self::markTestSkipped('No transactions in sandbox for the last 3 months.');
-        }
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
 
         $tx = $result->transactions[0];
         self::assertNotNull($tx->amount);
@@ -98,9 +93,7 @@ final class TransactionTest extends AbstractIntegrationTest
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
 
-        if ($result->transactions === []) {
-            self::markTestSkipped('No transactions in sandbox for the last 3 months.');
-        }
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
 
         $tx = $result->transactions[0];
         self::assertNotNull($tx->amount);
@@ -111,9 +104,7 @@ final class TransactionTest extends AbstractIntegrationTest
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
 
-        if ($result->transactions === []) {
-            self::markTestSkipped('No transactions in sandbox for the last 3 months.');
-        }
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
 
         foreach ($result->transactions as $tx) {
             self::assertInstanceOf(CreditDebitIndication::class, $tx->creditDebitIndication);
@@ -124,18 +115,46 @@ final class TransactionTest extends AbstractIntegrationTest
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
 
-        if ($result->transactions === []) {
-            self::markTestSkipped('No transactions in sandbox for the last 3 months.');
-        }
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
 
         foreach ($result->transactions as $tx) {
             self::assertInstanceOf(EntryDetails::class, $tx->entryDetails);
         }
     }
 
+    public function testTransactionInstructedAmountCanProduceMoney(): void
+    {
+        $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
+
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
+
+        foreach ($result->transactions as $tx) {
+            $instructedAmount = $tx->entryDetails?->transactionDetails?->instructedAmount;
+
+            if ($instructedAmount === null) {
+                continue;
+            }
+
+            $money = $instructedAmount->toMoney();
+
+            self::assertInstanceOf(Money::class, $money);
+            self::assertEquals($instructedAmount->currency, $money->getCurrency());
+            self::assertTrue(
+                $money->getAmount()->isEqualTo($instructedAmount->value),
+                'toMoney() amount should match instructedAmount value.',
+            );
+
+            return;
+        }
+
+        self::fail('No transactions with instructedAmount found in sandbox — expected sandbox to always contain instructed amount data.');
+    }
+
     public function testTransactionCounterPartyFields(): void
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
+
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
 
         foreach ($result->transactions as $tx) {
             $counterParty = $tx->entryDetails?->transactionDetails?->relatedParties?->counterParty;
@@ -155,12 +174,14 @@ final class TransactionTest extends AbstractIntegrationTest
             return;
         }
 
-        self::markTestSkipped('No transactions with counterparty data found in sandbox.');
+        self::fail('No transactions with counterparty data found in sandbox — expected sandbox to always contain counterparty data.');
     }
 
     public function testTransactionRemittanceSymbols(): void
     {
         $result = $this->client->transactions->list($this->accountNumber, $this->currency, $this->query());
+
+        self::assertNotEmpty($result->transactions, 'Sandbox should always return at least one transaction.');
 
         foreach ($result->transactions as $tx) {
             $ref = $tx->entryDetails?->transactionDetails?->remittanceInformation?->creditorReferenceInformation;
@@ -176,7 +197,7 @@ final class TransactionTest extends AbstractIntegrationTest
             return;
         }
 
-        self::markTestSkipped('No transactions with remittance symbols found in sandbox.');
+        self::fail('No transactions with remittance symbols found in sandbox — expected sandbox to always contain remittance data.');
     }
 
     public function testPagination(): void
