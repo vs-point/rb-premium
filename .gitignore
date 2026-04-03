@@ -1,0 +1,35 @@
+# Dependencies
+/vendor/
+
+# Composer
+composer.lock
+
+# Certificates & keys — never commit credentials
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# PHPUnit
+.phpunit.result.cache
+.phpunit.cache/
+
+# ECS cache
+.ecs_cache/
+
+# PHPStan cache
+.phpstan.cache/
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
