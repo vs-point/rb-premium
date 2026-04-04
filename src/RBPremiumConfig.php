@@ -6,7 +6,10 @@ namespace VsPoint\RBPremium;
 
 use VsPoint\RBPremium\Enum\Environment;
 
-final readonly class RBPremiumConfig
+/**
+ * File-based mTLS config — cert and key are loaded from PEM files on disk.
+ */
+final readonly class RBPremiumConfig implements RBPremiumConfigInterface
 {
     /**
      * @param string      $clientId     Value for X-IBM-Client-Id header
@@ -24,5 +27,32 @@ final readonly class RBPremiumConfig
         public ?string $keyPassword = null,
         public Environment $environment = Environment::Sandbox,
     ) {
+    }
+
+    public function getClientId(): string
+    {
+        return $this->clientId;
+    }
+
+    public function getEnvironment(): Environment
+    {
+        return $this->environment;
+    }
+
+    public function getGuzzleCertOptions(): array
+    {
+        $options = [];
+
+        $options['cert'] = $this->certPassword !== null
+            ? [$this->certPath, $this->certPassword]
+            : $this->certPath;
+
+        if ($this->keyPath !== null) {
+            $options['ssl_key'] = $this->keyPassword !== null
+                ? [$this->keyPath, $this->keyPassword]
+                : $this->keyPath;
+        }
+
+        return $options;
     }
 }

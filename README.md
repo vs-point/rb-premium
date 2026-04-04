@@ -54,6 +54,56 @@ $config = new RBPremiumConfig(
 $client = RBPremiumClient::create($config);
 ```
 
+### Inline certifikát (PEM string)
+
+Pokud certifikát nepochází ze souboru na disku — například je uložený v secret manageru, proměnné prostředí nebo databázi — použij `RBPremiumInlineConfig`. Certifikát se předá jako PEM string přímo do curlu přes `CURLOPT_SSLCERT_BLOB`, **žádný dočasný soubor se nezapisuje**.
+
+```php
+use VsPoint\RBPremium\RBPremiumClient;
+use VsPoint\RBPremium\RBPremiumInlineConfig;
+use VsPoint\RBPremium\Enum\Environment;
+
+$config = new RBPremiumInlineConfig(
+    clientId: 'your-client-id',
+    certPem: getenv('RB_CERT_PEM'),        // PEM string certifikátu (může obsahovat i klíč)
+    certPassword: null,                    // heslo certifikátu (pokud šifrovaný)
+    keyPem: getenv('RB_KEY_PEM'),          // PEM string klíče zvlášť (pokud není v certPem)
+    keyPassword: null,
+    environment: Environment::Production,
+);
+
+$client = RBPremiumClient::create($config);
+```
+
+> `CURLOPT_SSLCERT_BLOB` vyžaduje curl ≥ 7.71 a PHP ≥ 8.1. Obě podmínky splňuje jakákoliv aktuální instalace PHP 8.2+.
+
+### Přímé použití .p12 souboru
+
+PHP umí PKCS#12 načíst nativně bez jakékoliv knihovny přes `openssl_pkcs12_read()`:
+
+```php
+use VsPoint\RBPremium\RBPremiumClient;
+use VsPoint\RBPremium\RBPremiumInlineConfig;
+use VsPoint\RBPremium\Enum\Environment;
+
+$p12Content = file_get_contents('/path/to/cert.p12');
+
+if (!openssl_pkcs12_read($p12Content, $certs, 'heslo-k-p12')) {
+    throw new \RuntimeException('Nepodařilo se načíst .p12 certifikát: ' . openssl_error_string());
+}
+
+$config = new RBPremiumInlineConfig(
+    clientId: 'your-client-id',
+    certPem: $certs['cert'],
+    keyPem: $certs['pkey'],
+    environment: Environment::Production,
+);
+
+$client = RBPremiumClient::create($config);
+```
+
+> **Omezení `openssl_pkcs12_read()`:** Funkce má problémy s certifikáty šifrovanými legacy algoritmy (RC2, 3DES), které jsou časté u starších Windows exportů. Na serverech s OpenSSL ≥ 3.x takový soubor selže s chybou bez dalšího vysvětlení. V takovém případě proveď jednorázovou konverzi přes `openssl` příkazový řádek (viz sekce výše) a výsledný PEM ulož mimo disk (secret manager, env var).
+
 ### Integrace se Symfony DI
 
 ```yaml

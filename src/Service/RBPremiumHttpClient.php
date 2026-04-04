@@ -13,7 +13,7 @@ use VsPoint\RBPremium\Exception\NotFoundException;
 use VsPoint\RBPremium\Exception\RateLimitException;
 use VsPoint\RBPremium\Exception\RBPremiumApiException;
 use VsPoint\RBPremium\Exception\UnauthorisedException;
-use VsPoint\RBPremium\RBPremiumConfig;
+use VsPoint\RBPremium\RBPremiumConfigInterface;
 
 final class RBPremiumHttpClient
 {
@@ -23,30 +23,22 @@ final class RBPremiumHttpClient
 
     private readonly string $pathPrefix;
 
-    public function __construct(RBPremiumConfig $config)
+    public function __construct(RBPremiumConfigInterface $config)
     {
-        $this->pathPrefix = $config->environment->value;
+        $this->pathPrefix = $config->getEnvironment()
+            ->value;
 
-        $guzzleOptions = [
-            'base_uri' => self::BASE_URI,
-            'headers' => [
-                'X-IBM-Client-Id' => $config->clientId,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+        $guzzleOptions = array_merge(
+            [
+                'base_uri' => self::BASE_URI,
+                'headers' => [
+                    'X-IBM-Client-Id' => $config->getClientId(),
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ],
             ],
-        ];
-
-        $certOption = $config->certPassword !== null
-            ? [$config->certPath, $config->certPassword]
-            : $config->certPath;
-
-        $guzzleOptions['cert'] = $certOption;
-
-        if ($config->keyPath !== null) {
-            $guzzleOptions['ssl_key'] = $config->keyPassword !== null
-                ? [$config->keyPath, $config->keyPassword]
-                : $config->keyPath;
-        }
+            $config->getGuzzleCertOptions(),
+        );
 
         $this->client = new Client($guzzleOptions);
     }

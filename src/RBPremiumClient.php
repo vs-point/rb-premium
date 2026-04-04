@@ -40,7 +40,7 @@ final class RBPremiumClient
 
     public readonly FxRatesService $fxRates;
 
-    public function __construct(RBPremiumConfig $config, SerializerInterface $serializer)
+    public function __construct(RBPremiumConfigInterface $config, SerializerInterface $serializer)
     {
         $httpClient = new RBPremiumHttpClient($config);
 
@@ -51,7 +51,7 @@ final class RBPremiumClient
         $this->fxRates = new FxRatesService($httpClient, $serializer);
     }
 
-    public static function create(RBPremiumConfig $config): self
+    public static function create(RBPremiumConfigInterface $config): self
     {
         return new self($config, self::createSerializer());
     }
