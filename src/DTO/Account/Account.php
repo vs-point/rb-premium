@@ -29,7 +29,7 @@ final readonly class Account
         #[SerializedName('mainCurrency')]
         public ?Currency $mainCurrency = null,
         #[SerializedName('accountTypeId')]
-        public ?int $accountTypeId = null,
+        public ?string $accountTypeId = null,
     ) {
     }
 }

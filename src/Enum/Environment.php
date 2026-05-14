@@ -7,5 +7,5 @@ namespace VsPoint\RBPremium\Enum;
 enum Environment: string
 {
     case Sandbox = '/rbcz/premium/mock';
-    case Production = '/rbcz/premium';
+    case Production = '/rbcz/premium/api';
 }
