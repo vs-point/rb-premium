@@ -9,6 +9,9 @@ use Symfony\Component\Serializer\Attribute\SerializedName;
 
 final readonly class Account
 {
+    #[SerializedName('accountTypeId')]
+    public ?string $accountTypeId;
+
     public function __construct(
         #[SerializedName('accountId')]
         public ?int $accountId = null,
@@ -28,8 +31,9 @@ final readonly class Account
         public ?string $bankBicCode = null,
         #[SerializedName('mainCurrency')]
         public ?Currency $mainCurrency = null,
-        #[SerializedName('accountTypeId')]
-        public ?string $accountTypeId = null,
+        // Sandbox vrací int, produkce string — sjednocujeme na string.
+        int|string|null $accountTypeId = null,
     ) {
+        $this->accountTypeId = $accountTypeId === null ? null : (string) $accountTypeId;
     }
 }
