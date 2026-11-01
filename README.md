@@ -166,6 +166,11 @@ $result = $client->transactions->list(
     ),
 );
 
+// API vrací transakce jen 90 dní zpět (starší `from` → 400 DT01 Invalid date).
+// Bezpečný rozsah nezávislý na kalendáři (místo minusMonths(3), což je 89–92 dní):
+$query = TransactionQuery::lastDays();            // nejdelší povolená historie
+$query = TransactionQuery::lastDays(days: 7, page: 2);
+
 foreach ($result->transactions as $tx) {
     $money = $tx->amount?->toMoney();
     echo $tx->bookingDate . ' ' . $money . ' ' . $tx->creditDebitIndication?->value . PHP_EOL;

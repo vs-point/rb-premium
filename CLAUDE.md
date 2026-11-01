@@ -162,7 +162,7 @@ Tady jsou opravy, které by naivní implementace bez přečtení spec (nebo bez 
   `10000101000` výdej Platba (úhrada), `10000107000` příjem Platba, `10000301000` Úrok z nevyčerpaného úvěru (výdej) / vratka kartou (příjem s kartou),
   `30000201000` Platba kartou (i na internetu), `30000103000` Vklad/Výběr z bankomatu, `40000601000` Úrok z úvěru, `40000605000` Poplatek (vedení účtu, karta, pojištění).
   Stejný kód nese XML výpis (`BkTxCd/Prtry/Cd`); text kategorie je jen v PDF.
-- Transakce jde číst jen ~90 dní zpět (starší `from` → 400 `DT01 Invalid date`).
+- Transakce jde číst jen 90 dní zpět (starší `from` → 400 `DT01 Invalid date`) — platí i v sandboxu. Rozsah stav přes `TransactionQuery::lastDays()` (limit `TransactionQuery::MAX_HISTORY_DAYS`), nikdy přes `minusMonths()` — 3 měsíce mají 89–92 dní a test pak padá jen v některých měsících.
 - Seznam výpisů vrací formáty v `statementFormats` (`PDF`, `XML`), ne `formats`.
 - Stažení výpisu vyžaduje hlavičku `Accept-Language` (`download(..., language: 'cs')`) a `statementId` platí na jedno stažení.
 

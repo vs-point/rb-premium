@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace VsPoint\RBPremium\Tests\Integration;
 
-use Brick\DateTime\LocalDate;
-use Brick\DateTime\TimeZone;
 use Brick\Money\Currency;
 use Brick\Money\Money;
 use VsPoint\RBPremium\DTO\Transaction\EntryDetails;
@@ -49,11 +47,8 @@ final class TransactionTest extends AbstractIntegrationTest
 
     private function query(?int $page = null): TransactionQuery
     {
-        return new TransactionQuery(
-            from: LocalDate::now(TimeZone::utc())->minusMonths(3),
-            to: LocalDate::now(TimeZone::utc()),
-            page: $page,
-        );
+        // nejdelší historie, kterou API povolí — nezávislé na aktuálním datu
+        return TransactionQuery::lastDays(page: $page);
     }
 
     public function testListReturnsTransactions(): void
