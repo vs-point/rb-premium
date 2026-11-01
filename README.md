@@ -220,12 +220,13 @@ foreach ($result->statements as $statement) {
     echo $statement->statementId . ' (' . $statement->dateFrom . ' – ' . $statement->dateTo . ')' . PHP_EOL;
 }
 
-// Stažení výpisu jako PDF
+// Stažení výpisu jako PDF (formáty výpisu: $statement->formats, např. ['PDF', 'XML']).
+// statementId platí na jedno stažení — pro další formát znovu list(). Jazyk výpisu = hlavička Accept-Language.
 $pdfContent = $client->statements->download(new StatementDownloadPayload(
     accountNumber: '1234567890',
     statementId: $result->statements[0]->statementId,
     statementFormat: StatementFormat::Pdf,
-));
+), language: 'cs');
 
 file_put_contents('/tmp/vypis.pdf', $pdfContent);
 ```

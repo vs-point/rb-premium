@@ -81,14 +81,16 @@ final class RBPremiumHttpClient
 
     /**
      * POST JSON body, return raw binary response (e.g. statement download).
+     *
+     * @param array<string, string> $extraHeaders
      */
-    public function postForBinary(string $path, string $jsonBody): string
+    public function postForBinary(string $path, string $jsonBody, array $extraHeaders = []): string
     {
         $response = $this->request('POST', $path, [
             'body' => $jsonBody,
-            'headers' => [
+            'headers' => array_merge([
                 'Accept' => '*/*',
-            ],
+            ], $extraHeaders),
         ]);
 
         return (string) $response->getBody();

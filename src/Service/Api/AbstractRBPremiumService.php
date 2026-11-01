@@ -59,11 +59,14 @@ abstract class AbstractRBPremiumService
     /**
      * POST JSON payload, return raw binary response (e.g. statement file download).
      */
-    protected function doPostBinary(string $path, object $payload): string
+    /**
+     * @param array<string, string> $extraHeaders
+     */
+    protected function doPostBinary(string $path, object $payload, array $extraHeaders = []): string
     {
         $jsonBody = $this->serializer->serialize($payload, 'json');
 
-        return $this->client->postForBinary($path, $jsonBody);
+        return $this->client->postForBinary($path, $jsonBody, $extraHeaders);
     }
 
     /**

@@ -20,6 +20,11 @@ final readonly class TransactionDetails
         public ?RelatedParties $relatedParties = null,
         #[SerializedName('remittanceInformation')]
         public ?RemittanceInformation $remittanceInformation = null,
+        /**
+         * Maskované číslo karty — produkce ho posílá tady, sandbox na transakci ({@see Transaction::cardNumber()}).
+         */
+        #[SerializedName('paymentCardNumber')]
+        public ?string $paymentCardNumber = null,
     ) {
     }
 }

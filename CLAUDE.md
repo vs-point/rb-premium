@@ -151,11 +151,20 @@ Tady jsou opravy, které by naivní implementace bez přečtení spec (nebo bez 
 - **`relatedParties`**, **`remittanceInformation`**, **`instructedAmount`**, **`chargeBearer`** jsou přímo v `transactionDetails`, ne v `entryDetails`
 - **`chargeBearer`** patří do `TransactionDetails`, ne do `References`
 - **`instructedAmount`** patří do `TransactionDetails`, ne do `References`
-- **`paymentCardNumber`** je na `Transaction`, ne v `TransactionDetails`
+- **`paymentCardNumber`** je v sandboxu na `Transaction`, v **produkci** v `entryDetails.transactionDetails` — číst přes `Transaction::cardNumber()` (obojí)
 - **`bookingDate`** a **`valueDate`** jsou ISO 8601 datetime s timezone (např. `2020-04-28T07:59:05.000+02:00`) → `ZonedDateTime`, ne `LocalDate`
 - **`instructedAmount`** má navíc pole `exchangeRate` (BigDecimal) → vlastní DTO `InstructedAmount`, ne sdílený `Amount`
 - **`ChargeBearer`** enum: pouze `DEBT`, `CRED`, `SHAR` — `SLEV` v tomto API není
-- **`bankTransactionCode`** je objekt s polem `code` (string), ne string
+- **`bankTransactionCode`** je objekt s polem `code` (string), ne string — ISO `domain`/`proprietary` RB neposílá
+
+**Produkce vs. sandbox (ověřeno 2026-11-01 na produkčním firemním účtu, `tests/Unit/ProductionResponseDeserializationTest.php`):**
+- `bankTransactionCode.code` = 11místný kód RB, z něj plyne „Kategorie transakce“ z výpisu (jemnější „Typ transakce“ — okamžitá × běžná úhrada — z něj poznat nejde, API ho neposílá):
+  `10000101000` výdej Platba (úhrada), `10000107000` příjem Platba, `10000301000` Úrok z nevyčerpaného úvěru (výdej) / vratka kartou (příjem s kartou),
+  `30000201000` Platba kartou (i na internetu), `30000103000` Vklad/Výběr z bankomatu, `40000601000` Úrok z úvěru, `40000605000` Poplatek (vedení účtu, karta, pojištění).
+  Stejný kód nese XML výpis (`BkTxCd/Prtry/Cd`); text kategorie je jen v PDF.
+- Transakce jde číst jen ~90 dní zpět (starší `from` → 400 `DT01 Invalid date`).
+- Seznam výpisů vrací formáty v `statementFormats` (`PDF`, `XML`), ne `formats`.
+- Stažení výpisu vyžaduje hlavičku `Accept-Language` (`download(..., language: 'cs')`) a `statementId` platí na jedno stažení.
 
 **Account DTOs:**
 - **`accountId`** a **`accountTypeId`** jsou `int`, ne string

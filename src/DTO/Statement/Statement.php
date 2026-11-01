@@ -10,7 +10,7 @@ use Symfony\Component\Serializer\Attribute\SerializedName;
 final readonly class Statement
 {
     /**
-     * @param string[] $formats
+     * @param string[] $formats dostupné formáty, jak je vrací RB (`PDF`, `XML`, `MT940`)
      */
     public function __construct(
         #[SerializedName('statementId')]
@@ -21,7 +21,7 @@ final readonly class Statement
         public ?LocalDate $dateFrom = null,
         #[SerializedName('dateTo')]
         public ?LocalDate $dateTo = null,
-        #[SerializedName('formats')]
+        #[SerializedName('statementFormats')]
         public array $formats = [],
     ) {
     }

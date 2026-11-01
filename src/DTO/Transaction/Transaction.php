@@ -22,6 +22,10 @@ final readonly class Transaction
         public ?ZonedDateTime $bookingDate = null,
         #[SerializedName('valueDate')]
         public ?ZonedDateTime $valueDate = null,
+        /**
+         * Maskované číslo karty, jak ho posílá sandbox. Produkce ho posílá v `entryDetails.transactionDetails`
+         * — číst přes {@see self::cardNumber()}.
+         */
         #[SerializedName('paymentCardNumber')]
         public ?string $paymentCardNumber = null,
         #[SerializedName('bankTransactionCode')]
@@ -29,5 +33,16 @@ final readonly class Transaction
         #[SerializedName('entryDetails')]
         public ?EntryDetails $entryDetails = null,
     ) {
+    }
+
+    /**
+     * Maskované číslo karty (platba kartou, výběr z bankomatu, poplatky ke kartě) bez ohledu na to,
+     * kde ho RB poslalo: produkce v `entryDetails.transactionDetails`, sandbox na transakci.
+     */
+    public function cardNumber(): ?string
+    {
+        $number = $this->entryDetails->transactionDetails->paymentCardNumber ?? $this->paymentCardNumber;
+
+        return $number !== null && $number !== '' ? $number : null;
     }
 }
